@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monster Legends Gallery</title>
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #1c1c1c;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 20px;
+      font-size: 2rem;
+      color: #ffcc00;
+    }
+
+    form {
+      margin: 20px auto;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    input[type="file"], input[type="text"] {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    button {
+      background-color: #ff4081;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .card {
+      background: #2a2a2a;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    .card p {
+      margin: 5px 0;
+    }
+
+    .card button {
+      background: crimson;
+      margin-top: 5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: none;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐉 Monster Legends Real-Time Gallery</h1>
+
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="image" required>
+    <input type="text" name="caption" placeholder="Write caption..." required>
+    <button type="submit">Post</button>
+  </form>
+
+  <div id="gallery">
+    {% for post in posts %}
+      <div class="card" data-filename="{{ post.filename }}">
+        <img src="{{ url_for('static', filename='uploads/' ~ post.filename) }}">
+        <p>{{ post.caption }}</p>
+        <button onclick="deleteImage('{{ post.filename }}')">Delete</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    const socket = io();
+    const form = document.getElementById('uploadForm');
+    const gallery = document.getElementById('gallery');
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      await fetch('/upload', { method: 'POST', body: formData });
+      form.reset();
+    };
+
+    socket.on('new_image', data => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-filename', data.filename);
+
+      const img = document.createElement('img');
+      img.src = `/static/uploads/${data.filename}`;
+
+      const caption = document.createElement('p');
+      caption.innerText = data.caption;
+
+      const btn = document.createElement('button');
+      btn.innerText = 'Delete';
+      btn.onclick = () => deleteImage(data.filename);
+
+      card.appendChild(img);
+      card.appendChild(caption);
+      card.appendChild(btn);
+      gallery.appendChild(card);
+    });
+
+    function deleteImage(filename) {
+      fetch(`/delete/${filename}`, { method: 'DELETE' }).then(() => {
+        document.querySelector(`[data-filename="${filename}"]`).remove();
+      });
+    }
+  </script>
+</body>
+</html>
